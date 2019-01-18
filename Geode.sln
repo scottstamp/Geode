@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.271
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Geode", "Geode\Geode.csproj", "{20D5D51F-7E19-4390-9E46-1DFA11BF1096}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Geode.Extension.Windows", "Geode.Extension.Windows\Geode.Extension.Windows.csproj", "{6DF06EC9-1995-470D-B13F-F47665925853}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{20D5D51F-7E19-4390-9E46-1DFA11BF1096}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20D5D51F-7E19-4390-9E46-1DFA11BF1096}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20D5D51F-7E19-4390-9E46-1DFA11BF1096}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20D5D51F-7E19-4390-9E46-1DFA11BF1096}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DF06EC9-1995-470D-B13F-F47665925853}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DF06EC9-1995-470D-B13F-F47665925853}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DF06EC9-1995-470D-B13F-F47665925853}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DF06EC9-1995-470D-B13F-F47665925853}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0ED64A44-5104-4FA2-88F2-22AD7B8547F3}
+	EndGlobalSection
+EndGlobal
