@@ -16,7 +16,7 @@ namespace Geode.Extension.Windows
 {
     public class ExtensionForm : Form, IExtension, INotifyPropertyChanged
     {
-        private readonly TService _service;
+        private readonly GService _service;
         private readonly Dictionary<string, Binding> _bindings;
 
         public Incoming In => _service.In;
@@ -34,8 +34,32 @@ namespace Geode.Extension.Windows
         public ExtensionForm(IPEndPoint moduleServer)
         {
             _bindings = new Dictionary<string, Binding>();
-            _service = new TService(this, moduleServer);
+            _service = new GService(this, moduleServer);
         }
+
+        void IExtension.OnEntitiesLoaded(int count)
+        {
+            _service.OnEntitiesLoaded(count);
+            OnEntitiesLoaded(count);
+        }
+        public virtual void OnEntitiesLoaded(int count)
+        { }
+
+        void IExtension.OnWallItemsLoaded(int count)
+        {
+            _service.OnWallItemsLoaded(count);
+            OnWallItemsLoaded(count);
+        }
+        public virtual void OnWallItemsLoaded(int count)
+        { }
+
+        void IExtension.OnFloorItemsLoaded(int count)
+        {
+            _service.OnFloorItemsLoaded(count);
+            OnFloorItemsLoaded(count);
+        }
+        public virtual void OnFloorItemsLoaded(int count)
+        { }
 
         void IExtension.OnFlagsCheck(HPacket packet)
         {

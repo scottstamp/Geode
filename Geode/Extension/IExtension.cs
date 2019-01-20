@@ -17,7 +17,11 @@ namespace Geode.Extension
         IReadOnlyDictionary<int, HEntity> Entities { get; }
         IReadOnlyDictionary<int, HWallItem> WallItems { get; }
         IReadOnlyDictionary<int, HFloorItem> FloorItems { get; }
-        
+
+        void OnEntitiesLoaded(int count);
+        void OnWallItemsLoaded(int count);
+        void OnFloorItemsLoaded(int count);
+
         void OnFlagsCheck(HPacket packet);
         void OnDoubleClick(HPacket packet);
         void OnInfoRequest(HPacket packet);

@@ -19,7 +19,7 @@ using Geode.Network.Protocol;
 
 namespace Geode.Extension
 {
-    public class TService : IExtension
+    public class GService : IExtension, IDisposable
     {
         private readonly HNode _installer;
         private readonly IExtension _container;
@@ -29,11 +29,11 @@ namespace Geode.Extension
 
         private static readonly DataContractJsonSerializer _worldSerializer;
 
-        public const int EXTENSION_INFO = 1;
-        public const int MANIPULATED_PACKET = 2;
-        public const int REQUEST_FLAGS = 3;
-        public const int SEND_MESSAGE = 4;
-        public const int EXTENSION_CONSOLE_LOG = 98;
+        public const ushort EXTENSION_INFO = 1;
+        public const ushort MANIPULATED_PACKET = 2;
+        public const ushort REQUEST_FLAGS = 3;
+        public const ushort SEND_MESSAGE = 4;
+        public const ushort EXTENSION_CONSOLE_LOG = 98;
 
         public Incoming In { get; private set; }
         public Outgoing Out { get; private set; }
@@ -51,35 +51,35 @@ namespace Geode.Extension
 
         public static IPEndPoint DefaultModuleServer { get; }
 
-        static TService()
+        static GService()
         {
             _worldSerializer = new DataContractJsonSerializer(typeof(HWorld));
 
             DefaultModuleServer = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9092);
         }
 
-        public TService(IExtension container)
+        public GService(IExtension container)
             : this(container, null, null)
         { }
-        public TService(IExtension container, IPEndPoint moduleServer)
+        public GService(IExtension container, IPEndPoint moduleServer)
             : this(container, null, moduleServer)
         { }
 
-        protected TService()
+        protected GService()
             : this(null, null, null)
         { }
-        protected TService(IPEndPoint moduleServer)
+        protected GService(IPEndPoint moduleServer)
             : this(null, null, moduleServer)
         { }
 
-        protected TService(TService parent)
+        protected GService(GService parent)
             : this(null, parent, null)
         { }
-        protected TService(TService parent, IPEndPoint moduleServer)
+        protected GService(GService parent, IPEndPoint moduleServer)
             : this(null, parent, moduleServer)
         { }
 
-        private TService(IExtension container, TService parent, IPEndPoint moduleServer)
+        private GService(IExtension container, GService parent, IPEndPoint moduleServer)
         {
             _container = container ?? this;
             _unknownDataAttributes = parent?._unknownDataAttributes ?? new List<DataCaptureAttribute>();
@@ -128,6 +128,13 @@ namespace Geode.Extension
             Task handleInstallerDataTask = HandleInstallerDataAsync();
         }
 
+        public void OnEntitiesLoaded(int count)
+        { }
+        public void OnWallItemsLoaded(int count)
+        { }
+        public void OnFloorItemsLoaded(int count)
+        { }
+
         public virtual void OnFlagsCheck(HPacket packet)
         { }
         public virtual void OnDoubleClick(HPacket packet)
@@ -172,11 +179,13 @@ namespace Geode.Extension
             }
 
             string stringified = dataInterceptedArgs.ToString(true);
-            _installer.SendPacketAsync(2, stringified.Length, Encoding.GetEncoding("latin1").GetBytes(stringified));
+            _installer.SendPacketAsync(MANIPULATED_PACKET, stringified.Length, Encoding.GetEncoding("latin1").GetBytes(stringified));
         }
 
         public virtual void OnInitialized(HPacket packet)
-        { }
+        {
+            _installer.SendPacketAsync(REQUEST_FLAGS);
+        }
         public virtual void OnConnected(HPacket packet)
         {
             HotelServer = HotelEndPoint.Parse(packet.ReadUTF8(), packet.ReadInt32());
@@ -195,11 +204,17 @@ namespace Geode.Extension
             ResolveCallbacks();
         }
         public virtual void OnDisconnected(HPacket packet)
-        { }
+        {
+            _entities.Clear();
+            _wallItems.Clear();
+            _floorItems.Clear();
+            _inDataAttributes.Clear();
+            _outDataAttributes.Clear();
+        }
 
         public Task<int> SendToClientAsync(byte[] data)
         {
-            return _installer.SendPacketAsync(2, false, data.Length, data);
+            return _installer.SendPacketAsync(SEND_MESSAGE, false, data.Length, data);
         }
         public Task<int> SendToClientAsync(HPacket packet)
         {
@@ -212,7 +227,7 @@ namespace Geode.Extension
 
         public Task<int> SendToServerAsync(byte[] data)
         {
-            return _installer.SendPacketAsync(2, true, data.Length, data);
+            return _installer.SendPacketAsync(SEND_MESSAGE, true, data.Length, data);
         }
         public Task<int> SendToServerAsync(HPacket packet)
         {
@@ -290,25 +305,30 @@ namespace Geode.Extension
             {
                 if (packet.Id == In.RoomUsers)
                 {
-                    foreach (HEntity entity in HEntity.Parse(packet))
+                    HEntity[] entities = HEntity.Parse(packet);
+                    foreach (HEntity entity in entities)
                     {
                         _entities[entity.Index] = entity;
                     }
+                    _container.OnEntitiesLoaded(entities.Length);
                 }
                 else if (packet.Id == In.RoomWallItems)
                 {
-
-                    foreach (HWallItem wallItem in HWallItem.Parse(packet))
+                    HWallItem[] wallItems = HWallItem.Parse(packet);
+                    foreach (HWallItem wallItem in wallItems)
                     {
                         _wallItems[wallItem.Id] = wallItem;
                     }
+                    _container.OnWallItemsLoaded(wallItems.Length);
                 }
                 else if (packet.Id == In.RoomFloorItems)
                 {
-                    foreach (HFloorItem floorItem in HFloorItem.Parse(packet))
+                    HFloorItem[] floorItems = HFloorItem.Parse(packet);
+                    foreach (HFloorItem floorItem in floorItems)
                     {
                         _floorItems[floorItem.Id] = floorItem;
                     }
+                    _container.OnFloorItemsLoaded(floorItems.Length);
                 }
                 else if (packet.Id == In.RoomHeightMap)
                 {
@@ -332,13 +352,6 @@ namespace Geode.Extension
             attributes.Add(attribute);
         }
 
-        public virtual void Dispose()
-        {
-            _inDataAttributes.Clear();
-            _outDataAttributes.Clear();
-            _unknownDataAttributes.Clear();
-        }
-
         [DataContract]
         private class HWorld
         {
@@ -353,6 +366,20 @@ namespace Geode.Extension
 
             [DataMember(Name = "Outgoing")]
             public List<HMessage> Out { get; set; }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+        }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _installer.Dispose();
+            }
+            _container.OnDisconnected(null);
+            _unknownDataAttributes.Clear();
         }
     }
 }
