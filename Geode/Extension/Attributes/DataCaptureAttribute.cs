@@ -12,17 +12,23 @@ namespace Geode.Extension
     public abstract class DataCaptureAttribute : Attribute, IEquatable<DataCaptureAttribute>
     {
         public ushort? Id { get; }
+        public bool IsOutgoing { get; }
         public string Identifier { get; }
-        public abstract bool IsOutgoing { get; }
 
         internal object Target { get; set; }
         internal MethodInfo Method { get; set; }
 
-        public DataCaptureAttribute(ushort id)
+        private DataCaptureAttribute(bool isOutgoing)
+        {
+            IsOutgoing = isOutgoing;
+        }
+        public DataCaptureAttribute(ushort id, bool isOutgoing)
+            : this(isOutgoing)
         {
             Id = id;
         }
-        public DataCaptureAttribute(string identifier)
+        public DataCaptureAttribute(string identifier, bool isOutgoing)
+            : this(isOutgoing)
         {
             Identifier = identifier;
         }
@@ -135,7 +141,7 @@ namespace Geode.Extension
             }
             return values;
         }
-
+        
         public bool Equals(DataCaptureAttribute other)
         {
             if (Id != other.Id) return false;

@@ -97,14 +97,15 @@ namespace Geode.Network
         }
         public DataInterceptedEventArgs(string stringifiedInterceptionData)
         {
-            string[] sections = stringifiedInterceptionData.Split('\t');
+            string[] sections = stringifiedInterceptionData.Split(new[] { '\t' }, 4);
+
             _isBlocked = sections[0].Equals("1");
             Step = int.Parse(sections[1]);
 
-            IsOutgoing = !sections[2].Equals("TOSERVER");
+            IsOutgoing = sections[2].Equals("TOSERVER");
 
             bool isOriginal = sections[3][0].Equals('1');
-            byte[] packetData = Encoding.UTF8.GetBytes(sections[3].Substring(1));
+            byte[] packetData = Encoding.GetEncoding("latin1").GetBytes(sections[3].Substring(1));
             if (isOriginal)
             {
                 _ogData = Packet.ToBytes();
@@ -174,7 +175,11 @@ namespace Geode.Network
 
         public override string ToString()
         {
-            return base.ToString();
+            return ToString(false);
+        }
+        public string ToString(bool stringify)
+        {
+            return !stringify ? base.ToString() : $"{(IsBlocked ? 1 : 0)}\t{Step}\t{(IsOutgoing ? "TOSERVER" : "TOCLIENT")}\t{(IsOriginal ? 0 : 1)}{Encoding.GetEncoding("latin1").GetString(Packet.ToBytes())}";
         }
     }
 }

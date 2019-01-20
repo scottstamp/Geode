@@ -2,13 +2,11 @@
 {
     public sealed class InDataCaptureAttribute : DataCaptureAttribute
     {
-        public override bool IsOutgoing => false;
-
         public InDataCaptureAttribute(ushort id)
-            : base(id)
+            : base(id, false)
         { }
         public InDataCaptureAttribute(string identifier)
-            : base(identifier)
+            : base(identifier, false)
         { }
     }
 }

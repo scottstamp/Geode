@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Linq;
 using System.Text;
@@ -6,8 +7,10 @@ using System.Reflection;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Runtime.Serialization.Json;
 
 using Geode.Habbo;
 using Geode.Network;
@@ -24,14 +27,16 @@ namespace Geode.Extension
         private readonly Dictionary<ushort, Action<HPacket>> _extensionEvents;
         private readonly Dictionary<ushort, List<DataCaptureAttribute>> _outDataAttributes, _inDataAttributes;
 
+        private static readonly DataContractJsonSerializer _worldSerializer;
+
         public const int EXTENSION_INFO = 1;
         public const int MANIPULATED_PACKET = 2;
         public const int REQUEST_FLAGS = 3;
         public const int SEND_MESSAGE = 4;
         public const int EXTENSION_CONSOLE_LOG = 98;
 
-        public Incoming In { get; }
-        public Outgoing Out { get; }
+        public Incoming In { get; private set; }
+        public Outgoing Out { get; private set; }
         public string Revision { get; private set; }
         public HotelEndPoint HotelServer { get; private set; }
 
@@ -48,6 +53,8 @@ namespace Geode.Extension
 
         static TService()
         {
+            _worldSerializer = new DataContractJsonSerializer(typeof(HWorld));
+
             DefaultModuleServer = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9092);
         }
 
@@ -104,8 +111,6 @@ namespace Geode.Extension
             {
                 foreach (var dataCaptureAtt in method.GetCustomAttributes<DataCaptureAttribute>())
                 {
-                    if (dataCaptureAtt == null) continue;
-
                     dataCaptureAtt.Method = method;
                     if (_unknownDataAttributes.Any(dca => dca.Equals(dataCaptureAtt))) continue;
 
@@ -119,7 +124,7 @@ namespace Geode.Extension
             }
 
             _installer = HNode.ConnectNewAsync(moduleServer ?? DefaultModuleServer).GetAwaiter().GetResult();
-            if (_installer == null) throw new Exception($"Failure to establish a connection with: {moduleServer}");
+            if (_installer == null) throw new Exception("Failed to establish a connection with the extension server: " + moduleServer);
             Task handleInstallerDataTask = HandleInstallerDataAsync();
         }
 
@@ -151,12 +156,12 @@ namespace Geode.Extension
         public virtual void OnPacketIntercept(HPacket packet)
         {
             int stringifiedInteceptionDataLength = packet.ReadInt32();
-            string stringifiedInterceptionData = Encoding.UTF8.GetString(packet.ReadBytes(stringifiedInteceptionDataLength));
+            string stringifiedInterceptionData = Encoding.GetEncoding("latin1").GetString(packet.ReadBytes(stringifiedInteceptionDataLength));
 
             var dataInterceptedArgs = new DataInterceptedEventArgs(stringifiedInterceptionData);
             HandleGameObjects(dataInterceptedArgs.Packet, dataInterceptedArgs.IsOutgoing);
 
-            Dictionary<ushort, List<DataCaptureAttribute>> callbacks = null;
+            Dictionary<ushort, List<DataCaptureAttribute>> callbacks = dataInterceptedArgs.IsOutgoing ? _outDataAttributes : _inDataAttributes;
             if (callbacks.TryGetValue(dataInterceptedArgs.Packet.Id, out List<DataCaptureAttribute> attributes))
             {
                 foreach (DataCaptureAttribute attribute in attributes)
@@ -165,6 +170,9 @@ namespace Geode.Extension
                     attribute.Invoke(dataInterceptedArgs);
                 }
             }
+
+            string stringified = dataInterceptedArgs.ToString(true);
+            _installer.SendPacketAsync(2, stringified.Length, Encoding.GetEncoding("latin1").GetBytes(stringified));
         }
 
         public virtual void OnInitialized(HPacket packet)
@@ -174,7 +182,17 @@ namespace Geode.Extension
             HotelServer = HotelEndPoint.Parse(packet.ReadUTF8(), packet.ReadInt32());
             Revision = packet.ReadUTF8();
 
+            HWorld world = null;
             string messagesPath = packet.ReadUTF8();
+            using (FileStream messagesStream = File.OpenRead(messagesPath))
+            {
+                world = (HWorld)_worldSerializer.ReadObject(messagesStream);
+
+                Revision = world.Revision;
+                In = new Incoming(world.In);
+                Out = new Outgoing(world.Out);
+            }
+            ResolveCallbacks();
         }
         public virtual void OnDisconnected(HPacket packet)
         { }
@@ -205,6 +223,50 @@ namespace Geode.Extension
             return SendToServerAsync(EvaWirePacket.Construct(id, values));
         }
 
+        public HMessages GetMessages(bool isOutgoing) => isOutgoing ? (HMessages)Out : In;
+        public HMessage GetMessage(ushort id, bool isOutgoing) => GetMessages(isOutgoing).GetMessage(id);
+        public HMessage GetMessage(string identifier, bool isOutgoing) => GetMessages(isOutgoing).GetMessage(identifier);
+
+        private void ResolveCallbacks()
+        {
+            var unresolved = new Dictionary<string, IList<string>>();
+            foreach (PropertyInfo property in _container.GetType().GetAllProperties())
+            {
+                var messageAtt = property.GetCustomAttribute<MessageAttribute>();
+                if (string.IsNullOrWhiteSpace(messageAtt?.Identifier)) continue;
+
+                HMessage message = GetMessage(messageAtt.Identifier, messageAtt.IsOutgoing);
+                if (message == null)
+                {
+                    if (!unresolved.TryGetValue(messageAtt.Identifier, out IList<string> users))
+                    {
+                        users = new List<string>();
+                        unresolved.Add(messageAtt.Identifier, users);
+                    }
+                    users.Add($"Property({property.Name})");
+                }
+                else property.SetValue(_container, message);
+            }
+            foreach (DataCaptureAttribute dataCaptureAtt in _unknownDataAttributes)
+            {
+                if (string.IsNullOrWhiteSpace(dataCaptureAtt.Identifier)) continue;
+                HMessage message = GetMessage(dataCaptureAtt.Identifier, dataCaptureAtt.IsOutgoing);
+                if (message == null)
+                {
+                    if (!unresolved.TryGetValue(dataCaptureAtt.Identifier, out IList<string> users))
+                    {
+                        users = new List<string>();
+                        unresolved.Add(dataCaptureAtt.Identifier, users);
+                    }
+                    users.Add($"Method({dataCaptureAtt.Method})");
+                }
+                else AddCallback(dataCaptureAtt, message.Id);
+            }
+            if (unresolved.Count > 0)
+            {
+                throw new MessagesResolveException(Revision, unresolved);
+            }
+        }
         private async Task HandleInstallerDataAsync()
         {
             await Task.Yield();
@@ -226,39 +288,33 @@ namespace Geode.Extension
             packet.Position = 0;
             if (!isOutgoing)
             {
-                switch ("TODO") // TODO
+                if (packet.Id == In.RoomUsers)
                 {
-                    case nameof(In.RoomUsers):
+                    foreach (HEntity entity in HEntity.Parse(packet))
                     {
-                        foreach (HEntity entity in HEntity.Parse(packet))
-                        {
-                            _entities[entity.Index] = entity;
-                        }
-                        break;
+                        _entities[entity.Index] = entity;
                     }
-                    case nameof(In.RoomWallItems):
+                }
+                else if (packet.Id == In.RoomWallItems)
+                {
+
+                    foreach (HWallItem wallItem in HWallItem.Parse(packet))
                     {
-                        foreach (HWallItem wallItem in HWallItem.Parse(packet))
-                        {
-                            _wallItems[wallItem.Id] = wallItem;
-                        }
-                        break;
+                        _wallItems[wallItem.Id] = wallItem;
                     }
-                    case nameof(In.RoomFloorItems):
+                }
+                else if (packet.Id == In.RoomFloorItems)
+                {
+                    foreach (HFloorItem floorItem in HFloorItem.Parse(packet))
                     {
-                        foreach (HFloorItem floorItem in HFloorItem.Parse(packet))
-                        {
-                            _floorItems[floorItem.Id] = floorItem;
-                        }
-                        break;
+                        _floorItems[floorItem.Id] = floorItem;
                     }
-                    case nameof(In.RoomHeightMap):
-                    {
-                        _entities.Clear();
-                        _wallItems.Clear();
-                        _floorItems.Clear();
-                        break;
-                    }
+                }
+                else if (packet.Id == In.RoomHeightMap)
+                {
+                    _entities.Clear();
+                    _wallItems.Clear();
+                    _floorItems.Clear();
                 }
             }
             packet.Position = 0;
@@ -281,6 +337,22 @@ namespace Geode.Extension
             _inDataAttributes.Clear();
             _outDataAttributes.Clear();
             _unknownDataAttributes.Clear();
+        }
+
+        [DataContract]
+        private class HWorld
+        {
+            [DataMember]
+            public string Revision { get; set; }
+
+            [DataMember]
+            public int FileLength { get; set; }
+
+            [DataMember(Name = "Incoming")]
+            public List<HMessage> In { get; set; }
+
+            [DataMember(Name = "Outgoing")]
+            public List<HMessage> Out { get; set; }
         }
     }
 }
