@@ -21,6 +21,7 @@ namespace Geode.Extension.Windows
 
         public Incoming In => _service.In;
         public Outgoing Out => _service.Out;
+        public IHConnection Connection => _service;
         public string Revision => _service.Revision;
         public HotelEndPoint HotelServer => _service.HotelServer;
 
@@ -36,6 +37,10 @@ namespace Geode.Extension.Windows
             _bindings = new Dictionary<string, Binding>();
             _service = new GService(this, moduleServer);
         }
+
+        public HMessages GetMessages(bool isOutgoing) => _service.GetMessages(isOutgoing);
+        public HMessage GetMessage(ushort id, bool isOutgoing) => _service.GetMessage(id, isOutgoing);
+        public HMessage GetMessage(string identifier, bool isOutgoing) => _service.GetMessage(identifier, isOutgoing);
 
         void IExtension.OnEntitiesLoaded(int count)
         {

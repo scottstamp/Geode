@@ -135,13 +135,18 @@ namespace Geode.Extension
                             args.Packet.Position = 0;
                             values[i] = HWallItem.Parse(args.Packet);
                         }
+                        else if (typeof(IList<HEntityUpdate>).IsAssignableFrom(parameter.ParameterType))
+                        {
+                            args.Packet.Position = 0;
+                            values[i] = HEntityUpdate.Parse(args.Packet);
+                        }
                         break;
                     }
                 }
             }
             return values;
         }
-        
+
         public bool Equals(DataCaptureAttribute other)
         {
             if (Id != other.Id) return false;

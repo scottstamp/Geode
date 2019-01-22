@@ -19,7 +19,7 @@ using Geode.Network.Protocol;
 
 namespace Geode.Extension
 {
-    public class GService : IExtension, IDisposable
+    public class GService : IExtension, IHConnection, IDisposable
     {
         private readonly HNode _installer;
         private readonly IExtension _container;
