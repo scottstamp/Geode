@@ -320,7 +320,7 @@ namespace Geode.Extension
             packet.Position = 0;
             if (!isOutgoing)
             {
-                if (packet.Id == In.RoomUsers)
+                if (packet.Id == In.Users)
                 {
                     HEntity[] entities = HEntity.Parse(packet);
                     foreach (HEntity entity in entities)
@@ -329,7 +329,7 @@ namespace Geode.Extension
                     }
                     _container.OnEntitiesLoaded(entities.Length);
                 }
-                else if (packet.Id == In.RoomWallItems)
+                else if (packet.Id == In.Items)
                 {
                     HWallItem[] wallItems = HWallItem.Parse(packet);
                     foreach (HWallItem wallItem in wallItems)
@@ -338,7 +338,7 @@ namespace Geode.Extension
                     }
                     _container.OnWallItemsLoaded(wallItems.Length);
                 }
-                else if (packet.Id == In.RoomFloorItems)
+                else if (packet.Id == In.Objects)
                 {
                     HFloorItem[] floorItems = HFloorItem.Parse(packet);
                     foreach (HFloorItem floorItem in floorItems)
@@ -347,7 +347,7 @@ namespace Geode.Extension
                     }
                     _container.OnFloorItemsLoaded(floorItems.Length);
                 }
-                else if (packet.Id == In.RoomHeightMap)
+                else if (packet.Id == In.FloorHeightMap)
                 {
                     _entities.Clear();
                     _wallItems.Clear();

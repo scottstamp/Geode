@@ -15,16 +15,16 @@ Public Class Extension
     Dim BotFriendBadges As String() = New String() {"BOT", "FR17A", "NO83", "ITB26", "NL446"}
 
     Public Overrides Sub OnDataIntercept(data As DataInterceptedEventArgs)
-        If data.Packet.Id = Out.RequestUserProfile.Id Then
+        If data.Packet.Id = Out.GetExtendedProfile.Id Then
             Dim RequestedFriendID As Integer = data.Packet.ReadInt32()
             If RequestedFriendID = BotFriendID Then
-                SendToClientAsync([In].UserProfile, BotFriendID, BotFriendName, BotFriendLook, BotFriendMotto, BotFriendCreationDate, 0, 1, True, False, True, 0, -255, True)
-                SendToClientAsync([In].AddUserBadge, BotFriendID, BotFriendBadges.Length, 1, BotFriendBadges(0), 2, BotFriendBadges(1), 3, BotFriendBadges(2), 4, BotFriendBadges(3), 5, BotFriendBadges(4))
-                SendToClientAsync([In].ProfileFriends, BotFriendID, 1, 1, 1, 0, BotFriendCreatorName, BotFriendCreatorLook)
+                SendToClientAsync([In].ExtendedProfile, BotFriendID, BotFriendName, BotFriendLook, BotFriendMotto, BotFriendCreationDate, 0, 1, True, False, True, 0, -255, True)
+                SendToClientAsync([In].HabboUserBadges, BotFriendID, BotFriendBadges.Length, 1, BotFriendBadges(0), 2, BotFriendBadges(1), 3, BotFriendBadges(2), 4, BotFriendBadges(3), 5, BotFriendBadges(4))
+                SendToClientAsync([In].RelationshipStatusInfo, BotFriendID, 1, 1, 1, 0, BotFriendCreatorName, BotFriendCreatorLook)
             End If
         End If
 
-        If data.Packet.Id = Out.FriendPrivateMessage.Id Then
+        If data.Packet.Id = Out.SendMsg.Id Then
             Dim RequestedFriendID As Integer = data.Packet.ReadInt32()
             Dim RequestedFriendText As String = data.Packet.ReadUTF8()
             If RequestedFriendID = BotFriendID Then
@@ -46,19 +46,19 @@ Public Class Extension
                 End If
                 If RequestedFriendText.ToLower = "/look1" Then
                     CommandHandled = True
-                    SendToServerAsync(Out.UserSaveLook, "F", "ch-665-71.hr-515-45.fa-3276-72.hd-600-10.he-3274-84.lg-3216-73")
+                    SendToServerAsync(Out.UpdateFigureData, "F", "ch-665-71.hr-515-45.fa-3276-72.hd-600-10.he-3274-84.lg-3216-73")
                 End If
                 If RequestedFriendText.ToLower = "/look2" Then
                     CommandHandled = True
-                    SendToServerAsync(Out.UserSaveLook, "M", "ch-235-71.hr-893-45.fa-3276-72.hd-180-10.he-3274-84.lg-3290-82")
+                    SendToServerAsync(Out.UpdateFigureData, "M", "ch-235-71.hr-893-45.fa-3276-72.hd-180-10.he-3274-84.lg-3290-82")
                 End If
                 If RequestedFriendText.ToLower = "/sit" Then
                     CommandHandled = True
-                    SendToServerAsync(Out.RoomUserSit, 1)
+                    SendToServerAsync(Out.ChangePosture, 1)
                 End If
                 If RequestedFriendText.ToLower = "/fx" Then
                     CommandHandled = True
-                    SendToServerAsync(Out.RoomUserTalk, ":yyxxabxa", 0, -1)
+                    SendToServerAsync(Out.Chat, ":yyxxabxa", 0, -1)
                 End If
                 If CommandHandled = False Then
                     BotFriendWelcome()
@@ -69,8 +69,8 @@ Public Class Extension
         MyBase.OnDataIntercept(data)
     End Sub
 
-    <InDataCapture("LoadFriendRequests")>
-    Public Sub OnLoadFriendRequests(ByVal e As DataInterceptedEventArgs)
+    <InDataCapture("FriendRequests")>
+    Public Sub OnFriendRequests(ByVal e As DataInterceptedEventArgs)
         ShowBotFriend()
         BotFriendWelcome()
     End Sub
@@ -81,16 +81,16 @@ Public Class Extension
     End Sub
 
     Sub BotFriendSendMessage(ByVal Message As String)
-        SendToClientAsync([In].ReceivePrivateMessage, BotFriendID, Message, 0, "")
+        SendToClientAsync([In].NewConsole, BotFriendID, Message, 0, "")
     End Sub
 
     Sub ShowBotFriend()
         Dim CreatorRelation As Integer = 65537
-        SendToClientAsync([In].UpdateFriend, 0, 1, False, False, "", BotFriendID, "[BOT] " & BotFriendName, 1, True, False, BotFriendLook, 0, "", 0, True, True, True, CreatorRelation)
+        SendToClientAsync([In].FriendListUpdate, 0, 1, False, False, "", BotFriendID, "[BOT] " & BotFriendName, 1, True, False, BotFriendLook, 0, "", 0, True, True, True, CreatorRelation)
     End Sub
 
     Sub HideBotFriend()
-        SendToClientAsync([In].UpdateFriend, 0, 1, -1, BotFriendID)
+        SendToClientAsync([In].FriendListUpdate, 0, 1, -1, BotFriendID)
     End Sub
 
     Public Overrides Sub OnConnected(packet As Protocol.HPacket)
