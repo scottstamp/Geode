@@ -19,59 +19,49 @@ Public Class Extension
     End Sub
 
     Public Overrides Sub OnDataIntercept(data As DataInterceptedEventArgs)
-        If data.Packet.Id = Out.GetExtendedProfile.Id Then
+        If data.Packet.Id = Out.SendMsg.Id Then 'Bot received a message.
             Dim RequestedFriendID As Integer = data.Packet.ReadInt32()
-            If RequestedFriendID = BotFriendID Then
-                SendToClientAsync([In].ExtendedProfile, BotFriendID, BotFriendName, BotFriendLook, BotFriendMotto, BotFriendCreationDate, 0, 1, True, False, True, 0, -255, True)
-                SendToClientAsync([In].HabboUserBadges, BotFriendID, BotFriendBadges.Length, 1, BotFriendBadges(0), 2, BotFriendBadges(1), 3, BotFriendBadges(2), 4, BotFriendBadges(3), 5, BotFriendBadges(4))
-                SendToClientAsync([In].RelationshipStatusInfo, BotFriendID, 1, 1, 1, 0, BotFriendCreatorName, BotFriendCreatorLook)
-            End If
-        End If
-        If data.Packet.Id = Out.SendMsg.Id Then
-            Dim RequestedFriendID As Integer = data.Packet.ReadInt32()
-            Dim RequestedFriendText As String = data.Packet.ReadUTF8()
+            Dim RequestedMessage As String = data.Packet.ReadUTF8()
             If RequestedFriendID = BotFriendID Then
                 data.IsBlocked = True
-                Dim CommandHandled As Boolean = False
-                If RequestedFriendText = "/exit" Then
-                    CommandHandled = True
-                    HideBotFriend()
-                    MyBase.OnDataIntercept(data)
-                    Environment.Exit(0)
-                End If
-                If RequestedFriendText.ToLower = "/help" Then
-                    CommandHandled = True
-                    BotFriendSendMessage("Commands:")
-                    BotFriendSendMessage("/look1 and /look2 to change current look.")
-                    BotFriendSendMessage("/sit to force sit.")
-                    BotFriendSendMessage("/fx to get light sabber fx.")
-                    BotFriendSendMessage("/exit to exit extension.")
-                End If
-                If RequestedFriendText.ToLower = "/look1" Then
-                    CommandHandled = True
-                    SendToServerAsync(Out.UpdateFigureData, "F", "hr-515-45.ch-665-71.lg-3216-73.hd-600-10.fa-3276-72")
-                End If
-                If RequestedFriendText.ToLower = "/look2" Then
-                    CommandHandled = True
-                    SendToServerAsync(Out.UpdateFigureData, "M", "hr-893-45.ch-235-71.lg-3290-82.hd-180-10.fa-3276-72")
-                End If
-                If RequestedFriendText.ToLower = "/sit" Then
-                    CommandHandled = True
-                    SendToServerAsync(Out.ChangePosture, 1)
-                End If
-                If RequestedFriendText.ToLower = "/fx" Then
-                    CommandHandled = True
-                    SendToServerAsync(Out.Chat, ":yyxxabxa", 0, -1)
-                End If
-                If CommandHandled = False Then
-                    BotFriendWelcome()
-                End If
+                Select Case RequestedMessage.ToLower
+                    Case "/exit"
+                        HideBotFriend()
+                        MyBase.OnDataIntercept(data)
+                        Environment.Exit(0)
+                    Case "/help"
+                        BotFriendSendMessage("Commands:")
+                        BotFriendSendMessage("/look1 and /look2 to change current look.")
+                        BotFriendSendMessage("/sit to force sit.")
+                        BotFriendSendMessage("/fx to get light sabber fx.")
+                        BotFriendSendMessage("/exit to exit extension.")
+                    Case "/look1"
+                        SendToServerAsync(Out.UpdateFigureData, "F", "hr-515-45.ch-665-71.lg-3216-73.hd-600-10.fa-3276-72")
+                    Case "/look2"
+                        SendToServerAsync(Out.UpdateFigureData, "M", "hr-893-45.ch-235-71.lg-3290-82.hd-180-10.fa-3276-72")
+                    Case "/sit"
+                        SendToServerAsync(Out.ChangePosture, 1)
+                    Case "/fx"
+                        SendToServerAsync(Out.Chat, ":yyxxabxa", 0, -1)
+                    Case Else
+                        BotFriendWelcome()
+                End Select
             End If
         End If
         MyBase.OnDataIntercept(data)
     End Sub
 
-    <InDataCapture("FriendRequests")>
+    <InDataCapture("GetExtendedProfile")> 'Bot profile was opened.
+    Public Sub OnGetExtendedProfile(ByVal e As DataInterceptedEventArgs)
+        Dim RequestedFriendID As Integer = e.Packet.ReadInt32()
+        If RequestedFriendID = BotFriendID Then
+            SendToClientAsync([In].ExtendedProfile, BotFriendID, BotFriendName, BotFriendLook, BotFriendMotto, BotFriendCreationDate, 0, 1, True, False, True, 0, -255, True)
+            SendToClientAsync([In].HabboUserBadges, BotFriendID, BotFriendBadges.Length, 1, BotFriendBadges(0), 2, BotFriendBadges(1), 3, BotFriendBadges(2), 4, BotFriendBadges(3), 5, BotFriendBadges(4))
+            SendToClientAsync([In].RelationshipStatusInfo, BotFriendID, 1, 1, 1, 0, BotFriendCreatorName, BotFriendCreatorLook)
+        End If
+    End Sub
+
+    <InDataCapture("FriendRequests")> 'Show Bot when the initial console load is complete.
     Public Sub OnFriendRequests(ByVal e As DataInterceptedEventArgs)
         ShowBotFriend()
         BotFriendWelcome()

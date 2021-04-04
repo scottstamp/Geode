@@ -296,7 +296,7 @@ namespace Geode.Extension
             }
             if (unresolved.Count > 0)
             {
-                throw new MessagesResolveException(Revision, unresolved);
+                Console.WriteLine(new MessagesResolveException(Revision, unresolved));  /*Fixed: Log MessagesResolveException to console*/
             }
         }
         private async Task HandleInstallerDataAsync()
