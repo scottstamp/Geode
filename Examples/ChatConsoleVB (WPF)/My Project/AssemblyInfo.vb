@@ -11,12 +11,12 @@ Imports System.Windows
 
 ' Revisar los valores de los atributos del ensamblado
 
-<Assembly: AssemblyTitle("Wired_Reset")>
+<Assembly: AssemblyTitle("ChatConsoleVB")>
 <Assembly: AssemblyDescription("")>
-<Assembly: AssemblyCompany("")>
-<Assembly: AssemblyProduct("Wired_Reset")>
-<Assembly: AssemblyCopyright("Copyright ©  2020")>
-<Assembly: AssemblyTrademark("")>
+<Assembly: AssemblyCompany("Lilith")>
+<Assembly: AssemblyProduct("ChatConsoleVB")>
+<Assembly: AssemblyCopyright("Lilith")>
+<Assembly: AssemblyTrademark("ChatConsoleVB")>
 <Assembly: ComVisible(false)>
 
 'Para comenzar a compilar aplicaciones que se puedan traducir, establezca

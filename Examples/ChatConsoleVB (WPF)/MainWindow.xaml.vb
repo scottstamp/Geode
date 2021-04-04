@@ -1,12 +1,8 @@
 ﻿Public Class MainWindow
     Public ExtensionChild As Extension
 
-    Private Sub MainWindow_Initialized(sender As Object, e As EventArgs) Handles Me.Initialized
-        Try
-            ExtensionChild = New Extension()
-        Catch
-            ShowCriticalError()
-        End Try
+    Private Sub MainWindow_Loaded(sender As Object, e As EventArgs) Handles Me.Loaded
+        ExtensionChild = New Extension(Me)
     End Sub
 
     Private Sub ShowCriticalError()
