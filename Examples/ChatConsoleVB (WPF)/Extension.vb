@@ -10,21 +10,21 @@ Public Class Extension
     Dim BotFriendCreatorLook As String = "hr-3870-45.hd-600-10.ch-665-71.lg-3781-100-71.ha-3614-91-95.he-3469-1412.fa-3276-1412.ca-3702-71-71"
     Dim BotFriendName As String = "ChatConsole"
     Dim BotFriendMotto As String = "For testing purposes only."
-    Dim BotFriendCreationDate As String = "04-04-2021"
+    Dim BotFriendCreationDate As String = "05-04-2021"
     Dim BotFriendLook As String = "hd-3704-29.ch-3135-95.lg-3136-95"
     Dim BotFriendBadges As String() = New String() {"BOT", "FR17A", "NO83", "ITB26", "NL446"}
 
     Public Sub New(MainWindowParent As MainWindow)
-        Me.MainWindowParent = MainWindowParent
+        Me.MainWindowParent = MainWindowParent 'Set main window.
     End Sub
 
     Public Overrides Sub OnDataIntercept(data As DataInterceptedEventArgs)
-        If data.Packet.Id = Out.SendMsg.Id Then 'Bot received a message.
+        If data.Packet.Id = Out.SendMsg.Id Then 'User sent a message.
             Dim RequestedFriendID As Integer = data.Packet.ReadInt32()
             Dim RequestedMessage As String = data.Packet.ReadUTF8()
-            If RequestedFriendID = BotFriendID Then
+            If RequestedFriendID = BotFriendID Then 'Bot received a message.
                 data.IsBlocked = True
-                Select Case RequestedMessage.ToLower
+                Select Case RequestedMessage.ToLower 'Handle received message
                     Case "/exit"
                         HideBotFriend()
                         MyBase.OnDataIntercept(data)
@@ -77,6 +77,7 @@ Public Class Extension
     End Sub
 
     Sub ShowBotFriend()
+        HideBotFriend()
         Dim CreatorRelation As Integer = 65537
         SendToClientAsync([In].FriendListUpdate, 0, 1, False, False, "", BotFriendID, Chr(1) & "[BOT] " & BotFriendName, 1, True, False, BotFriendLook, 0, "", 0, True, True, True, CreatorRelation)
     End Sub
@@ -85,13 +86,17 @@ Public Class Extension
         SendToClientAsync([In].FriendListUpdate, 0, 1, -1, BotFriendID)
     End Sub
 
-    Public Overrides Sub OnConnected(packet As Protocol.HPacket)
+    Public Overrides Sub OnConnected(packet As Protocol.HPacket)  'G-Earth is connected.
         MyBase.OnConnected(packet)
         ShowBotFriend()
         BotFriendWelcome()
     End Sub
 
-    Public Overrides Sub OnCriticalError(error_desc As String)
+    Public Overrides Sub OnDisconnected(packet As Protocol.HPacket) 'G-Earth is open, but disconnected.
+        MyBase.OnDisconnected(packet)
+    End Sub
+
+    Public Overrides Sub OnCriticalError(error_desc As String) 'G-Earth is probably closed or the connection was rejected.
         MyBase.OnCriticalError(error_desc)
         Environment.Exit(0)
     End Sub

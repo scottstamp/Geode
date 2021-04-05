@@ -2,11 +2,11 @@
     Public ExtensionChild As Extension
 
     Private Sub MainWindow_Loaded(sender As Object, e As EventArgs) Handles Me.Loaded
-        ExtensionChild = New Extension(Me)
-    End Sub
-
-    Private Sub ShowCriticalError()
-        Environment.Exit(0)
+        Try
+            ExtensionChild = New Extension(Me) 'Try to start extension
+        Catch
+            Environment.Exit(0) 'Extension initialization failed.
+        End Try
     End Sub
 
 End Class
