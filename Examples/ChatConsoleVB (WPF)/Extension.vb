@@ -1,7 +1,7 @@
 ﻿Imports Geode.Extension
 Imports Geode.Network
 
-<[Module]("ChatConsole", "Lilith", "For testing purposes only.")>
+<[Module]("ChatConsole", "Lilith", "For testing purposes only.", True, False)>
 Public Class Extension
     Inherits GService
     Public MainWindowParent As MainWindow
@@ -84,6 +84,11 @@ Public Class Extension
 
     Sub HideBotFriend()
         SendToClientAsync([In].FriendListUpdate, 0, 1, -1, BotFriendID)
+    End Sub
+
+    Public Overrides Sub OnDoubleClick(packet As Protocol.HPacket)  'G-Earth extension play button clicked.
+        MyBase.OnDoubleClick(packet)
+        ShowBotFriend()
     End Sub
 
     Public Overrides Sub OnConnected(packet As Protocol.HPacket)  'G-Earth is connected.

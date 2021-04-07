@@ -4,7 +4,7 @@ using System;
 
 namespace ChatConsoleCSharp
 {
-    [Module("ChatConsole", "Lilith", "For testing purposes only.")]
+    [Module("ChatConsole", "Lilith", "For testing purposes only.",true,false)]
     public class Extension : GService
     {
         public MainWindow MainWindowParent;
@@ -120,6 +120,12 @@ namespace ChatConsoleCSharp
         public void HideBotFriend()
         {
             SendToClientAsync(In.FriendListUpdate, 0, 1, -1, BotFriendID);
+        }
+
+        public override void OnDoubleClick(Geode.Network.Protocol.HPacket packet) // G-Earth extension play button clicked.
+        {
+            base.OnDoubleClick(packet);
+            ShowBotFriend();
         }
 
         public override void OnConnected(Geode.Network.Protocol.HPacket packet)  // G-Earth is connected.

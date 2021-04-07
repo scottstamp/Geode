@@ -150,13 +150,13 @@ namespace Geode.Extension
             infoResponsePacket.Write(moduleAtt?.Author ?? string.Empty); // Author
             infoResponsePacket.Write(moduleAssemblyName.Version.ToString()); // Version
             infoResponsePacket.Write(moduleAtt?.Description ?? string.Empty);
-            infoResponsePacket.Write(true); // UtilizingOnDoubleClick
+            infoResponsePacket.Write(moduleAtt.UtilizingOnDoubleClick); // UtilizingOnDoubleClick
 
             infoResponsePacket.Write(false); // IsInstalledExtension
             infoResponsePacket.Write(string.Empty); // FileName
             infoResponsePacket.Write(string.Empty); // Cookie
 
-            infoResponsePacket.Write(false); // LeaveButtonVisible
+            infoResponsePacket.Write(moduleAtt.LeaveButtonVisible); // LeaveButtonVisible
             infoResponsePacket.Write(false); // DeleteButtonVisible
 
             _installer.SendPacketAsync(infoResponsePacket);
