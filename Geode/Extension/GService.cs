@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Linq;
 using System.Text;
@@ -7,11 +6,8 @@ using System.Reflection;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
-using System.Runtime.Serialization.Json;
-
 using Geode.Habbo;
 using Geode.Network;
 using Geode.Habbo.Messages;
@@ -21,14 +17,12 @@ namespace Geode.Extension
 {
     public class GService : IExtension, IHConnection, IDisposable
     {
-        public bool HarbleAPI_Failed = false; /*Fixed: HarbleAPI_Failed added*/
+        public bool MessagesInfo_Failed = false;
         private readonly HNode _installer;
         private readonly IExtension _container;
         private readonly List<DataCaptureAttribute> _unknownDataAttributes;
         private readonly Dictionary<ushort, Action<HPacket>> _extensionEvents;
         private readonly Dictionary<ushort, List<DataCaptureAttribute>> _outDataAttributes, _inDataAttributes;
-
-        private static readonly DataContractJsonSerializer _worldSerializer;
 
         public const ushort EXTENSION_INFO = 1;
         public const ushort MANIPULATED_PACKET = 2;
@@ -38,7 +32,9 @@ namespace Geode.Extension
 
         public Incoming In { get; private set; }
         public Outgoing Out { get; private set; }
-        public string Revision { get; private set; }
+        public string ClientVersion { get; private set; }
+        public string ClientIdentifier { get; private set; }
+        public string ClientType { get; private set; }
         public HotelEndPoint HotelServer { get; private set; }
 
         private readonly IDictionary<int, HEntity> _entities;
@@ -51,11 +47,11 @@ namespace Geode.Extension
         public IReadOnlyDictionary<int, HFloorItem> FloorItems { get; }
 
         public static IPEndPoint DefaultModuleServer { get; }
+        public List<HMessage> MessagesInfoIncoming { get; private set; }
+        public List<HMessage> MessagesInfoOutgoing { get; private set; }
 
         static GService()
         {
-            _worldSerializer = new DataContractJsonSerializer(typeof(HWorld));
-
             DefaultModuleServer = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9092);
         }
 
@@ -123,9 +119,8 @@ namespace Geode.Extension
                     else _unknownDataAttributes.Add(dataCaptureAtt);
                 }
             }
-
             _installer = HNode.ConnectNewAsync(moduleServer ?? DefaultModuleServer).GetAwaiter().GetResult();
-            if (_installer == null) { OnCriticalError("Connection failed"); return; } /*Fixed: Send OnCriticalError event*/
+            if (_installer == null) { OnCriticalError("Connection failed"); return; }
             Task handleInstallerDataTask = HandleInstallerDataAsync();
         }
 
@@ -167,11 +162,11 @@ namespace Geode.Extension
             string stringifiedInterceptionData = Encoding.GetEncoding("latin1").GetString(packet.ReadBytes(stringifiedInteceptionDataLength));
 
             var dataInterceptedArgs = new DataInterceptedEventArgs(stringifiedInterceptionData);
-            OnDataIntercept(dataInterceptedArgs); /*Fixed: Handle data with OnDataIntercept*/
+            OnDataIntercept(dataInterceptedArgs);
         }
-        public virtual void OnDataIntercept(DataInterceptedEventArgs data) /*Fixed: Added OnDataIntercept event*/
+        public virtual void OnDataIntercept(DataInterceptedEventArgs data)
         {
-            if (HarbleAPI_Failed == false) /*Fixed: HarbleAPI_Failed added*/
+            if (MessagesInfo_Failed == false)
             {
                 HandleGameObjects(data.Packet, data.IsOutgoing);
             }
@@ -197,23 +192,72 @@ namespace Geode.Extension
         public virtual void OnConnected(HPacket packet)
         {
             HotelServer = HotelEndPoint.Parse(packet.ReadUTF8(), packet.ReadInt32());
-            Revision = packet.ReadUTF8();
-
-            HWorld world = null;
+            ClientVersion = packet.ReadUTF8();
+            ClientIdentifier = packet.ReadUTF8();
+            ClientType = packet.ReadUTF8();
             try
             {
-                string messagesPath = packet.ReadUTF8();
-                using (FileStream messagesStream = File.OpenRead(messagesPath))
+                MessagesInfoIncoming = new List<HMessage>();
+                MessagesInfoOutgoing = new List<HMessage>();
+                Out = new Outgoing(new List<HMessage>());
+                In = new Incoming(new List<HMessage>());
+                int MessagesInfoLenght = packet.ReadInt32();
+                foreach (var i in Enumerable.Range(0, MessagesInfoLenght))
                 {
-                    world = (HWorld)_worldSerializer.ReadObject(messagesStream);
-
-                    Revision = world.Revision;
-                    In = new Incoming(world.In);
-                    Out = new Outgoing(world.Out);
-                    HarbleAPI_Failed = false; /*Fixed: HarbleAPI_Failed added*/
+                    int CurrentMessageID = packet.ReadInt32();
+                    string CurrentMessageHash = packet.ReadUTF8();
+                    string CurrentMessageName = packet.ReadUTF8();
+                    string CurrentMessageStructure = packet.ReadUTF8();
+                    bool CurrentMessageIsOutgoing = packet.ReadBoolean();
+                    string CurrentMessageSource = packet.ReadUTF8();
+                    if (string.IsNullOrWhiteSpace(CurrentMessageHash) || CurrentMessageHash == "NULL")
+                    {
+                        CurrentMessageHash = CurrentMessageName;
+                    }
+                    CurrentMessageHash = CurrentMessageSource + "_" + CurrentMessageHash;
+                    HMessage CurrentHMessage = new HMessage((ushort)CurrentMessageID, CurrentMessageHash, CurrentMessageName, CurrentMessageStructure);
+                    if (CurrentMessageIsOutgoing)
+                    {
+                        MessagesInfoOutgoing.Add(CurrentHMessage);
+                    }
+                    else
+                    {
+                        MessagesInfoIncoming.Add(CurrentHMessage);
+                    }
                 }
+                List<HMessage> GeodeOut = new List<HMessage>();
+                List<HMessage> GeodeIn = new List<HMessage>();
+                foreach (PropertyInfo GeodeOutProperty in Out.GetType().GetProperties())
+                {
+                    try
+                    {
+                        if (GeodeOutProperty.PropertyType == typeof(HMessage))
+                        {
+                            GeodeOut.Add(MessagesInfoOutgoing.First(x => x.Name == GeodeOutProperty.Name));
+                        }
+                    }
+                    catch { Console.WriteLine("MessageInfo not found for: " + GeodeOutProperty.Name); }
+                }
+                foreach (PropertyInfo GeodeInProperty in In.GetType().GetProperties())
+                {
+                    try
+                    {
+                        if (GeodeInProperty.PropertyType == typeof(HMessage))
+                        {
+                            GeodeIn.Add(MessagesInfoIncoming.First(x => x.Name == GeodeInProperty.Name));
+                        }
+                    }
+                    catch { Console.WriteLine("MessageInfo not found for: " + GeodeInProperty.Name); }
+                }
+                Out = new Outgoing(GeodeOut);
+                In = new Incoming(GeodeIn);
             }
-            catch { HarbleAPI_Failed = true; } /*Fixed: HarbleAPI_Failed added*/
+            catch (Exception ex)
+            {
+                Console.WriteLine("Critical MessagesInfo exception: " + ex.Message);
+                MessagesInfo_Failed = true;
+            }
+
             ResolveCallbacks();
         }
         public virtual void OnDisconnected(HPacket packet)
@@ -224,7 +268,7 @@ namespace Geode.Extension
             _inDataAttributes.Clear();
             _outDataAttributes.Clear();
         }
-        public virtual void OnCriticalError(string error_desc) /*Fixed: Added OnCriticalError event*/
+        public virtual void OnCriticalError(string error_desc)
         {
             Dispose();
         }
@@ -296,7 +340,7 @@ namespace Geode.Extension
             }
             if (unresolved.Count > 0)
             {
-                Console.WriteLine(new MessagesResolveException(Revision, unresolved));  /*Fixed: Log MessagesResolveException to console*/
+                Console.WriteLine(new MessagesResolveException(ClientVersion, unresolved));
             }
         }
         private async Task HandleInstallerDataAsync()
@@ -304,8 +348,8 @@ namespace Geode.Extension
             await Task.Yield();
             try
             {
-                HPacket packet = await _installer.ReceivePacketAsync().ConfigureAwait(true); /*Fixed: ConfigureAwait must be True*/
-                if (packet == null) { OnCriticalError("Empty packet input"); return; } /*Fixed: Send OnCriticalError event*/
+                HPacket packet = await _installer.ReceivePacketAsync().ConfigureAwait(true);
+                if (packet == null) { OnCriticalError("Empty packet input"); return; }
 
                 Task handleInstallerDataTask = HandleInstallerDataAsync();
                 if (_extensionEvents.TryGetValue(packet.Id, out Action<HPacket> handler))
@@ -313,7 +357,7 @@ namespace Geode.Extension
                     handler(packet);
                 }
             }
-            catch { OnCriticalError("Wrong packet input"); return; /*Fixed: Send OnCriticalError event*/ }
+            catch { OnCriticalError("Wrong packet input"); return; }
         }
         private void HandleGameObjects(HPacket packet, bool isOutgoing)
         {
@@ -368,26 +412,9 @@ namespace Geode.Extension
             }
             attributes.Add(attribute);
         }
-
-        [DataContract]
-        private class HWorld
-        {
-            [DataMember]
-            public string Revision { get; set; }
-
-            [DataMember]
-            public int FileLength { get; set; }
-
-            [DataMember(Name = "Incoming")]
-            public List<HMessage> In { get; set; }
-
-            [DataMember(Name = "Outgoing")]
-            public List<HMessage> Out { get; set; }
-        }
-
         public void Dispose()
         {
-            try { Dispose(true); } catch { Console.WriteLine("WARNING: Dispose event failed."); } /*Fixed: Added TryCatch to Dispose event*/
+            try { Dispose(true); } catch { Console.WriteLine("WARNING: Dispose event failed."); }
         }
         protected virtual void Dispose(bool disposing)
         {

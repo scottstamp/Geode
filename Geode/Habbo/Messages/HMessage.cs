@@ -50,6 +50,6 @@ namespace Geode.Habbo.Messages
         public bool Equals(HMessage other)
         {
             return Id == other.Id;
-        }
+        }   
     }
 }

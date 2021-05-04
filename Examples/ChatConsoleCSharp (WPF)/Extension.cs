@@ -77,10 +77,22 @@ namespace ChatConsoleCSharp
                     }
                 }
             }
+            if (data.Packet.Id == Out.RemoveFriend.Id) //User requested a friend remove.
+            {
+                data.Packet.ReadInt32();
+                int RequestedFriendID = data.Packet.ReadInt32();
+                if (RequestedFriendID == BotFriendID) //Bot remove was requested.
+                {
+                    data.IsBlocked = true;
+                    HideBotFriend();
+                    base.OnDataIntercept(data);
+                    Environment.Exit(0);
+                }
+            }
             base.OnDataIntercept(data);
         }
 
-        [InDataCapture("GetExtendedProfile")] // Bot profile was opened.
+        [OutDataCapture("GetExtendedProfile")] // Bot profile was requested.
         public void OnGetExtendedProfile(DataInterceptedEventArgs e)
         {
             int RequestedFriendID = e.Packet.ReadInt32();

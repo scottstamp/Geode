@@ -11,7 +11,7 @@ namespace Geode.Extension
     {
         Incoming In { get; }
         Outgoing Out { get; }
-        string Revision { get; }
+        string ClientVersion { get; }
         HotelEndPoint HotelServer { get; }
 
         IReadOnlyDictionary<int, HEntity> Entities { get; }
@@ -26,11 +26,11 @@ namespace Geode.Extension
         void OnDoubleClick(HPacket packet);
         void OnInfoRequest(HPacket packet);
         void OnPacketIntercept(HPacket packet);
-        void OnDataIntercept(DataInterceptedEventArgs data); /*Fixed: Added OnDataIntercept event*/
+        void OnDataIntercept(DataInterceptedEventArgs data);
 
         void OnInitialized(HPacket packet);
         void OnConnected(HPacket packet);
         void OnDisconnected(HPacket packet);
-        void OnCriticalError(string error_desc); /*Fixed: Added OnCriticalError event*/
+        void OnCriticalError(string error_desc);
     }
 }

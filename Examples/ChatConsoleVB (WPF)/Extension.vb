@@ -48,10 +48,20 @@ Public Class Extension
                 End Select
             End If
         End If
+        If data.Packet.Id = Out.RemoveFriend.Id Then 'User requested a friend remove.
+            data.Packet.ReadInt32()
+            Dim RequestedFriendID As Integer = data.Packet.ReadInt32()
+            If RequestedFriendID = BotFriendID Then 'Bot remove was requested.
+                data.IsBlocked = True
+                HideBotFriend()
+                MyBase.OnDataIntercept(data)
+                Environment.Exit(0)
+            End If
+        End If
         MyBase.OnDataIntercept(data)
     End Sub
 
-    <InDataCapture("GetExtendedProfile")> 'Bot profile was opened.
+    <OutDataCapture("GetExtendedProfile")> 'Bot profile was requested.
     Public Sub OnGetExtendedProfile(ByVal e As DataInterceptedEventArgs)
         Dim RequestedFriendID As Integer = e.Packet.ReadInt32()
         If RequestedFriendID = BotFriendID Then
