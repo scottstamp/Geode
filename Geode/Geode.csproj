@@ -2,6 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>LilithRainbows</Authors>
+    <Company>G-Earth</Company>
+    <Version>1.4.0</Version>
+    <Description>Compatible with G-Earth 1.4+
+Usage examples can be found on the project site</Description>
+    <PackageProjectUrl>https://github.com/LilithRainbows/Geode</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/LilithRainbows/Geode</RepositoryUrl>
+    <RepositoryType></RepositoryType>
+    <PackageTags>geode, habbo, g-earth</PackageTags>
+    <PackageId>G-Earth-Geode</PackageId>
   </PropertyGroup>
 
 </Project>
