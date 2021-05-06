@@ -31,11 +31,15 @@ jobs:
       - name: Create NuGet package
         run: dotnet pack --configuration Release Geode
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload class library artifact
+        uses: actions/upload-artifact@v2
         with:
-          path: |
-            Geode/bin/Release/Geode.dll
-            Geode/bin/Release/*.nupkg
+          path: Geode/bin/Release/netstandard2.0/Geode.dll
+
+      - name: Upload NuGet package artifact
+        uses: actions/upload-artifact@v2
+        with:
+          path: Geode/bin/Release/*.nupkg
 
       - name: Public package to NuGet repository
         if: startsWith(github.event.ref, 'refs/tags/v')
