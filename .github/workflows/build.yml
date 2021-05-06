@@ -34,8 +34,8 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           path: |
-          Geode/bin/Release/Geode.dll
-          Geode/bin/Release/*.nupkg
+            Geode/bin/Release/Geode.dll
+            Geode/bin/Release/*.nupkg
 
       - name: Public package to NuGet repository
         if: startsWith(github.event.ref, 'refs/tags/v')
