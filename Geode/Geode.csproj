@@ -1,15 +1,15 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Authors>LilithRainbows</Authors>
+    <Authors>LilithRainbows, scottstamp</Authors>
     <Company>G-Earth</Company>
-    <Version>1.4.1-alpha</Version>
+    <Version>1.4.1-beta</Version>
     <Description>Compatible with G-Earth 1.4+
 Usage examples can be found on the project site</Description>
-    <PackageProjectUrl>https://github.com/LilithRainbows/Geode</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/LilithRainbows/Geode</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/scottstamp/Geode</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/scottstamp/Geode</RepositoryUrl>
     <RepositoryType></RepositoryType>
     <PackageTags>geode, habbo, g-earth</PackageTags>
     <PackageId>G-Earth-Geode</PackageId>
