@@ -1,0 +1,42 @@
+# .github/workflows/build.yml
+
+name: Build (and publish tagged commits)
+on:
+  push:
+    branches:
+      - master # Default release branch
+    tags:
+      - v* # Tags matching v*
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '5.0.x'
+        env:
+          NUGET_AUTH_TOKEN: ${{secrets.NUGET_API_KEY}}
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore Geode
+      
+      - name: Create NuGet package
+        run: dotnet pack --configuration Release Geode
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: |
+          Geode/bin/Release/Geode.dll
+          Geode/bin/Release/*.nupkg
+
+      - name: Public package to NuGet repository
+        if: startsWith(github.event.ref, 'refs/tags/v')
+        run: dotnet push Geode/bin/Release/*.nupkg
