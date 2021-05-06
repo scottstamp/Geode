@@ -1,7 +1,10 @@
 # .github/workflows/build.yml
 
 name: Build (and publish tagged commits)
-on: push
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
@@ -17,18 +20,9 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: "5.0.x"
-        env:
-          NUGET_AUTH_TOKEN: ${{secrets.NUGET_API_KEY}}
 
       - name: Build
         run: dotnet build --configuration Release Geode
-
-      - name: Create NuGet package
-        run: dotnet pack --configuration Release Geode
-
-      - name: Get NuGet package filename
-        id: get-pkgname
-        run: echo ::set-output name=pkgname::$(cd Geode/bin/Release && ls *.nupkg)
 
       - name: Upload class library artifact
         uses: actions/upload-artifact@v2
@@ -36,22 +30,13 @@ jobs:
           name: Geode.dll
           path: Geode/bin/Release/netstandard2.0/Geode.dll
 
-      - name: Upload NuGet package artifact
-        uses: actions/upload-artifact@v2
+      - name: publish on version change
+        id: publish_nuget
+        uses: rohith/publish-nuget@v2
         with:
-          name: ${{ steps.get-pkgname.outputs.pkgname }}
-          path: Geode/bin/Release/*.nupkg
-
-      - name: Public package to NuGet repository
-        if: startsWith(github.event.ref, 'refs/tags/v')
-        run: dotnet push Geode/bin/Release/*.nupkg
-
-      - name: Create new GitHub Release for package
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/v')
-        with:
-          files: |
-            Geode/bin/Release/netstandard2.0/Geode.dll
-            Geode/bin/Release/*.nupkg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROJECT_FILE_PATH: Geode/Geode.csproj
+          PACKAGE_NAME: G-Earth-Geode
+          TAG_COMMIT: true
+          TAG_FORMAT: v*
+          NUGET_KEY: ${{secrets.NUGET_API_KEY}}
+          INCLUDE_SYMBOLS: true
