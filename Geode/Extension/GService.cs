@@ -32,6 +32,9 @@ namespace Geode.Extension
 
         public Incoming In { get; private set; }
         public Outgoing Out { get; private set; }
+        public UnityIncoming UnityIn { get; private set; }
+        public UnityOutgoing UnityOut { get; private set; }
+
         public string ClientVersion { get; private set; }
         public string ClientIdentifier { get; private set; }
         public string ClientType { get; private set; }
@@ -166,7 +169,7 @@ namespace Geode.Extension
         }
         public virtual void OnDataIntercept(DataInterceptedEventArgs data)
         {
-            if (MessagesInfo_Failed == false)
+            if (MessagesInfo_Failed == false && ClientType != "UNITY")
             {
                 HandleGameObjects(data.Packet, data.IsOutgoing);
             }
@@ -198,20 +201,25 @@ namespace Geode.Extension
             ClientIdentifier = packet.ReadUTF8();
             ClientType = packet.ReadUTF8();
 
-            if (ClientType == "UNITY")
-            {
-                MessagesInfo_Failed = true;
-                return;
-            }
-
-            HotelServer = HotelEndPoint.Parse(hHost, hPort);
+            if (ClientType != "UNITY")
+                HotelServer = HotelEndPoint.Parse(hHost, hPort);
 
             try
             {
                 MessagesInfoIncoming = new List<HMessage>();
                 MessagesInfoOutgoing = new List<HMessage>();
-                Out = new Outgoing(new List<HMessage>());
-                In = new Incoming(new List<HMessage>());
+
+                if (ClientType == "UNITY")
+                {
+                    UnityIn = new UnityIncoming(new List<HMessage>());
+                    UnityOut = new UnityOutgoing(new List<HMessage>());
+                }
+                else
+                {
+                    Out = new Outgoing(new List<HMessage>());
+                    In = new Incoming(new List<HMessage>());
+                }
+
                 int MessagesInfoLenght = packet.ReadInt32();
                 foreach (var i in Enumerable.Range(0, MessagesInfoLenght))
                 {
@@ -238,30 +246,64 @@ namespace Geode.Extension
                 }
                 List<HMessage> GeodeOut = new List<HMessage>();
                 List<HMessage> GeodeIn = new List<HMessage>();
-                foreach (PropertyInfo GeodeOutProperty in Out.GetType().GetProperties())
+                if (ClientType == "UNITY")
                 {
-                    try
+                    foreach (PropertyInfo GeodeOutProperty in UnityOut.GetType().GetProperties())
                     {
-                        if (GeodeOutProperty.PropertyType == typeof(HMessage))
+                        try
                         {
-                            GeodeOut.Add(MessagesInfoOutgoing.First(x => x.Name == GeodeOutProperty.Name));
+                            if (GeodeOutProperty.PropertyType == typeof(HMessage))
+                            {
+                                var msgInfo = MessagesInfoOutgoing.FirstOrDefault(x => x.Name == GeodeOutProperty.Name);
+                                if (msgInfo != null)
+                                    GeodeOut.Add(msgInfo);
+                            }
                         }
+                        catch { Console.WriteLine("MessageInfo not found for: " + GeodeOutProperty.Name); }
                     }
-                    catch { Console.WriteLine("MessageInfo not found for: " + GeodeOutProperty.Name); }
+                    foreach (PropertyInfo GeodeInProperty in UnityIn.GetType().GetProperties())
+                    {
+                        try
+                        {
+                            if (GeodeInProperty.PropertyType == typeof(HMessage))
+                            {
+                                var msgInfo = MessagesInfoIncoming.FirstOrDefault(x => x.Name == GeodeInProperty.Name);
+                                if (msgInfo != null)
+                                    GeodeIn.Add(msgInfo);
+                            }
+                        }
+                        catch { Console.WriteLine("MessageInfo not found for: " + GeodeInProperty.Name); }
+                    }
+                    UnityOut = new UnityOutgoing(GeodeOut);
+                    UnityIn = new UnityIncoming(GeodeIn);
                 }
-                foreach (PropertyInfo GeodeInProperty in In.GetType().GetProperties())
+                else
                 {
-                    try
+                    foreach (PropertyInfo GeodeOutProperty in Out.GetType().GetProperties())
                     {
-                        if (GeodeInProperty.PropertyType == typeof(HMessage))
+                        try
                         {
-                            GeodeIn.Add(MessagesInfoIncoming.First(x => x.Name == GeodeInProperty.Name));
+                            if (GeodeOutProperty.PropertyType == typeof(HMessage))
+                            {
+                                GeodeOut.Add(MessagesInfoOutgoing.First(x => x.Name == GeodeOutProperty.Name));
+                            }
                         }
+                        catch { Console.WriteLine("MessageInfo not found for: " + GeodeOutProperty.Name); }
                     }
-                    catch { Console.WriteLine("MessageInfo not found for: " + GeodeInProperty.Name); }
+                    foreach (PropertyInfo GeodeInProperty in In.GetType().GetProperties())
+                    {
+                        try
+                        {
+                            if (GeodeInProperty.PropertyType == typeof(HMessage))
+                            {
+                                GeodeIn.Add(MessagesInfoIncoming.First(x => x.Name == GeodeInProperty.Name));
+                            }
+                        }
+                        catch { Console.WriteLine("MessageInfo not found for: " + GeodeInProperty.Name); }
+                    }
+                    Out = new Outgoing(GeodeOut);
+                    In = new Incoming(GeodeIn);
                 }
-                Out = new Outgoing(GeodeOut);
-                In = new Incoming(GeodeIn);
             }
             catch (Exception ex)
             {
@@ -310,7 +352,14 @@ namespace Geode.Extension
             return SendToServerAsync(EvaWirePacket.Construct(id, values));
         }
 
-        public HMessages GetMessages(bool isOutgoing) => isOutgoing ? (HMessages)Out : In;
+        public HMessages GetMessages(bool isOutgoing)
+        {
+            if (ClientType == "UNITY")
+                return isOutgoing ? (HMessages)UnityOut : UnityIn;
+            else
+                return isOutgoing ? (HMessages)Out : In;
+        }
+
         public HMessage GetMessage(ushort id, bool isOutgoing) => GetMessages(isOutgoing).GetMessage(id);
         public HMessage GetMessage(string identifier, bool isOutgoing) => GetMessages(isOutgoing).GetMessage(identifier);
 
