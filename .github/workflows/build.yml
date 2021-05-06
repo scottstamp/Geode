@@ -39,4 +39,6 @@ jobs:
           TAG_COMMIT: true
           TAG_FORMAT: v*
           NUGET_KEY: ${{secrets.NUGET_API_KEY}}
-          INCLUDE_SYMBOLS: true
+
+          # Symbols publishing currently broken with rohith/publish-nuget@v2
+          # INCLUDE_SYMBOLS: true
