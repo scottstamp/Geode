@@ -10,14 +10,16 @@ namespace Geode.Extension
         public string Description { get; }
         public bool UtilizingOnDoubleClick { get; }
         public bool LeaveButtonVisible { get; }
+        public bool UseDefaultCallbacks { get; }
 
-        public ModuleAttribute(string title, string author, string description, bool utilizingondoubleclick = false, bool leavebuttonvisible = true)
+        public ModuleAttribute(string title, string author, string description, bool utilizingondoubleclick = false, bool leavebuttonvisible = true, bool useDefaultCallbacks = true)
         {
             Title = title;
             Author = author;
             Description = description;
             UtilizingOnDoubleClick = utilizingondoubleclick;
             LeaveButtonVisible = leavebuttonvisible;
+            UseDefaultCallbacks = useDefaultCallbacks;
         }
     }
 }

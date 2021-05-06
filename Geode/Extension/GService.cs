@@ -53,6 +53,29 @@ namespace Geode.Extension
         public List<HMessage> MessagesInfoIncoming { get; private set; }
         public List<HMessage> MessagesInfoOutgoing { get; private set; }
 
+        private AssemblyName _moduleAssemblyName = null;
+        public AssemblyName ModuleAssemblyName
+        {
+            get
+            {
+                if (_moduleAssemblyName == null)
+                    _moduleAssemblyName = Assembly.GetAssembly(_container.GetType()).GetName();
+
+                return _moduleAssemblyName;
+            }
+        }
+        private ModuleAttribute _moduleAtt = null;
+        public ModuleAttribute ModuleAtt
+        {
+            get
+            {
+                if (_moduleAtt == null)
+                    _moduleAtt = _container.GetType().GetCustomAttribute<ModuleAttribute>();
+
+                return _moduleAtt;
+            }
+        }
+
         static GService()
         {
             DefaultModuleServer = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9092);
@@ -141,20 +164,18 @@ namespace Geode.Extension
         public virtual void OnInfoRequest(HPacket packet)
         {
             var infoResponsePacket = new EvaWirePacket(EXTENSION_INFO);
-            AssemblyName moduleAssemblyName = Assembly.GetAssembly(_container.GetType()).GetName();
-            var moduleAtt = _container.GetType().GetCustomAttribute<ModuleAttribute>();
 
-            infoResponsePacket.Write(moduleAtt?.Title ?? moduleAssemblyName.Name); // Title
-            infoResponsePacket.Write(moduleAtt?.Author ?? string.Empty); // Author
-            infoResponsePacket.Write(moduleAssemblyName.Version.ToString()); // Version
-            infoResponsePacket.Write(moduleAtt?.Description ?? string.Empty);
-            infoResponsePacket.Write(moduleAtt.UtilizingOnDoubleClick); // UtilizingOnDoubleClick
+            infoResponsePacket.Write(ModuleAtt?.Title ?? ModuleAssemblyName.Name); // Title
+            infoResponsePacket.Write(ModuleAtt?.Author ?? string.Empty); // Author
+            infoResponsePacket.Write(ModuleAssemblyName.Version.ToString()); // Version
+            infoResponsePacket.Write(ModuleAtt?.Description ?? string.Empty);
+            infoResponsePacket.Write(ModuleAtt.UtilizingOnDoubleClick); // UtilizingOnDoubleClick
 
             infoResponsePacket.Write(false); // IsInstalledExtension
             infoResponsePacket.Write(string.Empty); // FileName
             infoResponsePacket.Write(string.Empty); // Cookie
 
-            infoResponsePacket.Write(moduleAtt.LeaveButtonVisible); // LeaveButtonVisible
+            infoResponsePacket.Write(ModuleAtt.LeaveButtonVisible); // LeaveButtonVisible
             infoResponsePacket.Write(false); // DeleteButtonVisible
 
             _installer.SendPacketAsync(infoResponsePacket);
@@ -169,7 +190,7 @@ namespace Geode.Extension
         }
         public virtual void OnDataIntercept(DataInterceptedEventArgs data)
         {
-            if (MessagesInfo_Failed == false && ClientType != "UNITY")
+            if (!MessagesInfo_Failed && ModuleAtt.UseDefaultCallbacks && ClientType != "UNITY")
             {
                 HandleGameObjects(data.Packet, data.IsOutgoing);
             }
