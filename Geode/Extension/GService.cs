@@ -191,10 +191,21 @@ namespace Geode.Extension
         }
         public virtual void OnConnected(HPacket packet)
         {
-            HotelServer = HotelEndPoint.Parse(packet.ReadUTF8(), packet.ReadInt32());
+            var hHost = packet.ReadUTF8();
+            var hPort = packet.ReadInt32();
+
             ClientVersion = packet.ReadUTF8();
             ClientIdentifier = packet.ReadUTF8();
             ClientType = packet.ReadUTF8();
+
+            if (ClientType == "UNITY")
+            {
+                MessagesInfo_Failed = true;
+                return;
+            }
+
+            HotelServer = HotelEndPoint.Parse(hHost, hPort);
+
             try
             {
                 MessagesInfoIncoming = new List<HMessage>();
