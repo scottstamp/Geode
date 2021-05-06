@@ -26,7 +26,7 @@ jobs:
           NUGET_AUTH_TOKEN: ${{secrets.NUGET_API_KEY}}
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore Geode
+        run: dotnet build --configuration Release Geode
       
       - name: Create NuGet package
         run: dotnet pack --configuration Release Geode
