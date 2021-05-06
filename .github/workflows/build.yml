@@ -1,12 +1,7 @@
 # .github/workflows/build.yml
 
 name: Build (and publish tagged commits)
-on:
-  push:
-    branches:
-      - master # Default release branch
-    tags:
-      - v* # Tags matching v*
+on: push
 
 jobs:
   build:
