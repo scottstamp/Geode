@@ -17,6 +17,17 @@ namespace Geode.Extension
 {
     public class GService : IExtension, IHConnection, IDisposable
     {
+        public bool IsConnected { get; private set; } = false;
+        public bool DisableEventHandlers = false;
+        public event EventHandler<DataInterceptedEventArgs> OnDataInterceptEvent;
+        public event EventHandler<HPacket> OnDoubleClickEvent;
+        public event EventHandler<HPacket> OnConnectedEvent;
+        public event EventHandler<HPacket> OnDisconnectedEvent;
+        public event EventHandler<string> OnCriticalErrorEvent;
+        public event EventHandler<int> OnEntitiesLoadedEvent;
+        public event EventHandler<int> OnWallItemsLoadedEvent;
+        public event EventHandler<int> OnFloorItemsLoadedEvent;
+
         public bool MessagesInfo_Failed = false;
         private readonly HNode _installer;
         private readonly IExtension _container;
@@ -125,16 +136,36 @@ namespace Geode.Extension
         }
 
         public void OnEntitiesLoaded(int count)
-        { }
+        {
+            if (DisableEventHandlers == false)
+            {
+                try { OnEntitiesLoadedEvent.Invoke(this, count); } catch { }; //Invoke event handler
+            }
+        }
         public void OnWallItemsLoaded(int count)
-        { }
+        {
+            if (DisableEventHandlers == false)
+            {
+                try { OnWallItemsLoadedEvent.Invoke(this, count); } catch { }; //Invoke event handler
+            }
+        }
         public void OnFloorItemsLoaded(int count)
-        { }
+        {
+            if (DisableEventHandlers == false)
+            {
+                try { OnFloorItemsLoadedEvent.Invoke(this, count); } catch { }; //Invoke event handler
+            }
+        }
 
         public virtual void OnFlagsCheck(HPacket packet)
         { }
         public virtual void OnDoubleClick(HPacket packet)
-        { }
+        {
+            if (DisableEventHandlers == false)
+            {
+                try { OnDoubleClickEvent.Invoke(this, packet); } catch { }; //Invoke event handler
+            }
+        }
         public virtual void OnInfoRequest(HPacket packet)
         {
             var infoResponsePacket = new EvaWirePacket(EXTENSION_INFO);
@@ -166,6 +197,10 @@ namespace Geode.Extension
         }
         public virtual void OnDataIntercept(DataInterceptedEventArgs data)
         {
+            if (IsConnected && DisableEventHandlers == false)
+            {
+                try { OnDataInterceptEvent.Invoke(this, data); } catch { };//Invoke event handler
+            }
             if (MessagesInfo_Failed == false)
             {
                 HandleGameObjects(data.Packet, data.IsOutgoing);
@@ -259,18 +294,32 @@ namespace Geode.Extension
             }
 
             ResolveCallbacks();
+            IsConnected = true;
+            if (DisableEventHandlers == false)
+            {
+                try { OnConnectedEvent.Invoke(this, packet); } catch { };//Invoke event handler
+            }
         }
         public virtual void OnDisconnected(HPacket packet)
         {
+            IsConnected = false;
             _entities.Clear();
             _wallItems.Clear();
             _floorItems.Clear();
             _inDataAttributes.Clear();
             _outDataAttributes.Clear();
+            if (DisableEventHandlers == false)
+            {
+                try { OnDisconnectedEvent.Invoke(this, packet); } catch { }; //Invoke event handler
+            }
         }
         public virtual void OnCriticalError(string error_desc)
         {
             Dispose();
+            if (DisableEventHandlers == false)
+            {
+                try { OnCriticalErrorEvent.Invoke(this, error_desc); } catch { }; //Invoke event handler
+            }
         }
 
         public Task<int> SendToClientAsync(byte[] data)
