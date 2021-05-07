@@ -1,8 +1,7 @@
 # Geode
 
 <b>WARNING:</b><br>
-Before connecting you must put the HarbleAPI messages file inside G-Earth Cache folder.<br>
-https://github.com/LilithRainbows/HarbleAPI_FlashAIR
+G-Earth 1.4.1 or later is required, only Flash/AIR client is supported.<br>
 
 <b>Guide for end users:</b>
 - Connect AIR client using G-Earth.
